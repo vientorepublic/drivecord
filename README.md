@@ -2,8 +2,6 @@
 
 Discord를 무료 파일 저장소로 사용합니다. DriveCord는 대용량 파일을 청크로 분할해 Discord 메시지 첨부파일로 업로드하고, 다운로드 시 병합하여 복원합니다. 모든 과정에서 SHA-256 무결성 검증을 수행합니다.
 
----
-
 ## 동작 원리
 
 ### 업로드
@@ -34,15 +32,11 @@ flowchart LR
 
 각 청크는 SHA-256 해시와 함께 매니페스트 JSON 파일에 기록됩니다. 다운로드 시 모든 청크를 병합 전에 재검증하고, 최종 파일을 원본 해시와 대조합니다.
 
----
-
 ## 요구 사항
 
 - Node.js 18 이상
 - Discord 봇 토큰 ([Discord Developer Portal](https://discord.com/developers/applications))
 - 봇에게 **메시지 보내기** 및 **파일 첨부** 권한이 있는 Discord 텍스트 채널
-
----
 
 ## 설정
 
@@ -62,8 +56,6 @@ DISCORD_CHANNEL_ID=채널_ID_입력
 ```
 
 채널 ID 복사 방법: Discord 설정에서 **개발자 모드**를 활성화한 뒤, 채널 우클릭 → **ID 복사**.
-
----
 
 ## 사용법
 
@@ -105,8 +97,6 @@ node dist/index.js upload ./video.mp4
 node dist/index.js download ./video.mp4.manifest.json
 ```
 
----
-
 ## 환경 변수
 
 `.env` 파일에서 모든 옵션을 설정할 수 있습니다:
@@ -127,8 +117,6 @@ node dist/index.js download ./video.mp4.manifest.json
 | Level 2     | `52428800` (50 MB)   |
 | Level 3     | `104857600` (100 MB) |
 
----
-
 ## 프로젝트 구조
 
 ```
@@ -143,8 +131,6 @@ src/
 └── downloader.ts  Discord 청크 다운로드
 ```
 
----
-
 ## 개발
 
 ```bash
@@ -153,8 +139,6 @@ npm run lint:fix      # ESLint 자동 수정
 npm run format        # Prettier 포맷 적용
 npm run format:check  # Prettier 포맷 검사만
 ```
-
----
 
 ## 라이선스
 
