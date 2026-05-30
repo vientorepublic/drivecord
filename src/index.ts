@@ -77,7 +77,6 @@ async function handleUpload(filePath: string, manifestOut?: string): Promise<voi
   console.log();
   printStep('Connecting to Discord...');
 
-  // Use an object wrapper to prevent TypeScript closure-narrowing to `never`
   const state = { bar: null as SingleBar | null };
 
   const manifest = await withReadyClient((client) =>
@@ -93,7 +92,6 @@ async function handleUpload(filePath: string, manifestOut?: string): Promise<voi
         state.bar?.update(done);
       },
       onRetry: (idx, attempt, maxRetries) => {
-        // Bar is active - write warning on a new line above it via stderr
         process.stderr.write(`\n`);
         printWarn(`Chunk ${idx}: retry ${attempt + 1}/${maxRetries}`);
       },

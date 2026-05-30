@@ -3,12 +3,6 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import type { UploadManifest } from './types';
 
-/**
- * Buffer 배열을 순서대로 이어 붙여 단일 파일로 저장합니다.
- *
- * @param chunks    순서대로 정렬된 Buffer 배열 (index 0부터)
- * @param outputPath 저장할 파일 경로
- */
 export async function mergeChunks(chunks: Buffer[], outputPath: string): Promise<void> {
   if (chunks.length === 0) {
     throw new Error('No chunks to merge.');
@@ -27,11 +21,6 @@ export async function mergeChunks(chunks: Buffer[], outputPath: string): Promise
   }
 }
 
-/**
- * 병합된 파일의 SHA-256 해시를 계산하고 매니페스트의 originalHash 와 비교합니다.
- *
- * @returns 해시가 일치하면 true, 불일치하면 false
- */
 export async function verifyMergedFile(
   filePath: string,
   manifest: UploadManifest,
@@ -47,10 +36,6 @@ export async function verifyMergedFile(
   return hash === manifest.originalHash;
 }
 
-/**
- * 각 청크 Buffer의 SHA-256 해시가 매니페스트에 기록된 값과 일치하는지 검증합니다.
- * 불일치하는 청크의 인덱스 배열을 반환합니다 (모두 일치하면 빈 배열).
- */
 export function validateChunkHashes(chunks: Buffer[], manifest: UploadManifest): number[] {
   const corrupted: number[] = [];
 

@@ -3,13 +3,6 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import type { Chunk } from './types';
 
-/**
- * 파일을 읽어 지정된 크기의 Buffer 청크 배열로 분할합니다.
- *
- * @param filePath  분할할 파일 경로
- * @param chunkSize 청크 하나의 최대 크기 (bytes)
- * @returns         순서대로 정렬된 Chunk 배열
- */
 export async function splitFile(filePath: string, chunkSize: number): Promise<Chunk[]> {
   if (chunkSize <= 0) {
     throw new RangeError(`chunkSize must be a positive number. Received: ${chunkSize}`);
@@ -50,10 +43,6 @@ export async function splitFile(filePath: string, chunkSize: number): Promise<Ch
   return chunks;
 }
 
-/**
- * 원본 파일 전체의 SHA-256 해시를 계산합니다.
- * 매니페스트의 originalHash 필드에 사용됩니다.
- */
 export async function hashFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash('sha256');
@@ -64,10 +53,6 @@ export async function hashFile(filePath: string): Promise<string> {
   });
 }
 
-/**
- * 청크 파일명을 생성합니다.
- * 예) "video.mp4" + index 3 + totalChunks 12  →  "video.mp4.chunk.003"
- */
 export function buildChunkFilename(
   originalFilename: string,
   index: number,

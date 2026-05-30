@@ -1,6 +1,5 @@
 import { SingleBar, Presets } from 'cli-progress';
 
-// ANSI escape codes (no extra dependency)
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
