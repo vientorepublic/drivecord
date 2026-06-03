@@ -16,3 +16,6 @@ dist/
 # Editors
 .vscode/
 *.swp
+
+# Data
+data/

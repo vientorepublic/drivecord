@@ -1,0 +1,35 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { exec } from 'child_process';
+import { AppModule } from './app.module';
+
+const PORT = parseInt(process.env.PORT ?? '3000', 10);
+
+function openBrowser(url: string): void {
+  const platform = process.platform;
+  let cmd: string;
+  if (platform === 'darwin') cmd = `open "${url}"`;
+  else if (platform === 'win32') cmd = `start "" "${url}"`;
+  else cmd = `xdg-open "${url}"`;
+
+  exec(cmd, (err) => {
+    if (err) console.warn('[drivecord] Could not open browser automatically:', err.message);
+  });
+}
+
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
+
+  await app.listen(PORT);
+
+  const url = `http://localhost:${PORT}`;
+  console.log(`\n  DriveCord Web UI  →  ${url}\n`);
+  openBrowser(url);
+}
+
+bootstrap().catch((err: unknown) => {
+  console.error('[drivecord] Fatal error:', err);
+  process.exit(1);
+});
