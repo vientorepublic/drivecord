@@ -5,13 +5,14 @@ import {
   Delete,
   Param,
   Query,
+  Req,
   Res,
   UploadedFile,
   UseInterceptors,
   NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { FilesService } from './files.service';
 
 function writeSSE(res: Response, data: object): void {
@@ -25,13 +26,17 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Get()
-  list() {
-    return this.filesService.list();
+  list(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.filesService.list(parseInt(page, 10), parseInt(limit, 10));
   }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async upload(@UploadedFile() file: Express.Multer.File, @Res() res: Response): Promise<void> {
+  async upload(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
     if (!file) {
       res.status(400).json({ message: 'No file provided' });
       return;
@@ -42,18 +47,26 @@ export class FilesController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    const abortCtrl = new AbortController();
+    req.on('close', () => abortCtrl.abort());
+
     try {
       writeSSE(res, { type: 'start', filename: file.originalname });
 
-      const entry = await this.filesService.upload(file, (done, total) => {
-        writeSSE(res, { type: 'progress', done, total });
-      });
+      const entry = await this.filesService.upload(
+        file,
+        (done, total) => {
+          writeSSE(res, { type: 'progress', done, total });
+        },
+        abortCtrl.signal,
+      );
 
       writeSSE(res, { type: 'done', file: entry });
     } catch (err) {
+      const isAbort = (err as { name?: string })?.name === 'AbortError';
       writeSSE(res, {
         type: 'error',
-        message: err instanceof Error ? err.message : String(err),
+        message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
       res.end();
@@ -61,24 +74,36 @@ export class FilesController {
   }
 
   @Post(':id/download')
-  async startDownload(@Param('id') id: string, @Res() res: Response): Promise<void> {
+  async startDownload(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    const abortCtrl = new AbortController();
+    req.on('close', () => abortCtrl.abort());
+
     try {
       writeSSE(res, { type: 'start' });
 
-      const jobId = await this.filesService.startDownload(id, (done, total) => {
-        writeSSE(res, { type: 'progress', done, total });
-      });
+      const jobId = await this.filesService.startDownload(
+        id,
+        (done, total) => {
+          writeSSE(res, { type: 'progress', done, total });
+        },
+        abortCtrl.signal,
+      );
 
       writeSSE(res, { type: 'ready', jobId });
     } catch (err) {
+      const isAbort = (err as { name?: string })?.name === 'AbortError';
       writeSSE(res, {
         type: 'error',
-        message: err instanceof Error ? err.message : String(err),
+        message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
       res.end();

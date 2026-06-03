@@ -272,17 +272,21 @@ main {
 
 /* ── Progress overlay ── */
 .overlay {
-  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
   z-index: 100;
+  display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
 }
 .overlay.show {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .modal {
@@ -292,6 +296,15 @@ main {
   padding: 32px 36px;
   width: 420px;
   max-width: 92vw;
+  transform: scale(0.94) translateY(10px);
+  opacity: 0;
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.22s ease;
+}
+.overlay.show .modal {
+  transform: scale(1) translateY(0);
+  opacity: 1;
 }
 .modal-icon {
   font-size: 28px;
@@ -440,4 +453,63 @@ main {
 }
 .btn-confirm-discord:hover {
   opacity: 0.88;
+}
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+.btn-page {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.btn-page:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.btn-page:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.page-info {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 52px;
+  text-align: center;
+}
+
+/* ── Modal cancel button ── */
+.modal-cancel {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+.btn-cancel-op {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.btn-cancel-op:hover {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.6);
 }

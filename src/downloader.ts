@@ -27,6 +27,7 @@ export async function downloadChunks(
   client: Client,
   manifest: UploadManifest,
   onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<Buffer[]> {
   const channel = await client.channels.fetch(manifest.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
@@ -37,6 +38,7 @@ export async function downloadChunks(
   const buffers: Buffer[] = new Array(manifest.totalChunks);
 
   for (const record of sortedChunks) {
+    signal?.throwIfAborted();
     const message = await channel.messages.fetch(record.messageId);
     const attachment = message.attachments.find((a) => a.name === record.filename);
 
@@ -60,7 +62,7 @@ export async function downloadFile(
   const outputDir = path.resolve(options.outputDir ?? '.');
   const outputPath = path.join(outputDir, manifest.originalFilename);
 
-  const buffers = await downloadChunks(client, manifest, options.onProgress);
+  const buffers = await downloadChunks(client, manifest, options.onProgress, options.signal);
 
   const corrupted = validateChunkHashes(buffers, manifest);
   if (corrupted.length > 0) {

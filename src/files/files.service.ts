@@ -44,19 +44,26 @@ export class FilesService implements OnModuleInit {
     }
   }
 
-  async list(): Promise<FileManifestEntity[]> {
-    return this.repo.find({ order: { uploadedAt: 'DESC' } });
+  async list(page = 1, limit = 20): Promise<{ data: FileManifestEntity[]; total: number }> {
+    const [data, total] = await this.repo.findAndCount({
+      order: { uploadedAt: 'DESC' },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+    return { data, total };
   }
 
   async upload(
     file: Express.Multer.File,
     onProgress?: (done: number, total: number) => void,
+    signal?: AbortSignal,
   ): Promise<FileManifestEntity> {
     const tmpPath = file.path;
     try {
       const manifest = await uploadFile(this.discord.getClient(), {
         filePath: tmpPath,
         onProgress,
+        signal,
       });
       manifest.originalFilename = file.originalname;
       const entity = this.repo.create({ ...manifest, id: crypto.randomUUID() });
@@ -69,6 +76,7 @@ export class FilesService implements OnModuleInit {
   async startDownload(
     id: string,
     onProgress?: (done: number, total: number) => void,
+    signal?: AbortSignal,
   ): Promise<string> {
     const entry = await this.repo.findOneBy({ id });
     if (!entry) throw new NotFoundException(`File with id "${id}" not found`);
@@ -79,6 +87,7 @@ export class FilesService implements OnModuleInit {
         manifestPath: '',
         outputDir: tmpDir,
         onProgress,
+        signal,
       });
       const buffer = fs.readFileSync(outputPath);
       const jobId = crypto.randomUUID();

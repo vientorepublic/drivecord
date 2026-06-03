@@ -39,6 +39,7 @@
           <p>업로드된 파일이 없습니다</p>
         </div>
       </div>
+      <div class="pagination" id="pagination" style="display: none"></div>
     </main>
 
     <!-- Progress overlay -->
@@ -55,6 +56,11 @@
         <div class="progress-label">
           <span id="progressLabel">연결 중...</span>
           <span class="progress-pct" id="progressPct"></span>
+        </div>
+        <div class="modal-cancel">
+          <button class="btn btn-cancel-op" onclick="cancelOperation()">
+            <i class="fa-solid fa-xmark"></i> 취소
+          </button>
         </div>
       </div>
     </div>

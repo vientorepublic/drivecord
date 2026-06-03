@@ -29,6 +29,7 @@ export interface UploadOptions {
   channelId?: string;
   chunkSize?: number;
   manifestOut?: string;
+  signal?: AbortSignal;
   onSplit?: (totalChunks: number) => void;
   onProgress?: (done: number, total: number) => void;
   onRetry?: (chunkIndex: number, attempt: number, maxRetries: number) => void;
@@ -37,5 +38,6 @@ export interface UploadOptions {
 export interface DownloadOptions {
   manifestPath: string;
   outputDir?: string;
+  signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
 }
