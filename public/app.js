@@ -231,13 +231,18 @@ function closeDeleteModal() {
 
 async function confirmDelete(withDiscord) {
   const id = pendingDeleteId;
-  closeDeleteModal();
   if (!id) return;
+
+  // Show loading state inside the modal while the request is in flight.
+  const actions = document.querySelector('#deleteOverlay .confirm-actions');
+  const originalHTML = actions.innerHTML;
+  actions.innerHTML = `<span class="delete-loading"><i class="fa-solid fa-spinner fa-spin"></i> 삭제 중...</span>`;
 
   try {
     const url = `/api/files/${id}${withDiscord ? '?discord=true' : ''}`;
     const res = await fetch(url, { method: 'DELETE' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    closeDeleteModal();
     // Go to previous page if we just deleted the last item on this page
     const remaining = files.filter((f) => f.id !== id).length;
     const newPage = remaining === 0 && currentPage > 1 ? currentPage - 1 : currentPage;
@@ -247,6 +252,8 @@ async function confirmDelete(withDiscord) {
       'info',
     );
   } catch (err) {
+    // Restore buttons so the user can retry or cancel.
+    actions.innerHTML = originalHTML;
     showToast('삭제 실패: ' + err.message, 'error');
   }
 }

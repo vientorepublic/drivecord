@@ -5,20 +5,24 @@ import * as crypto from 'crypto';
 import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { uploadFile } from '../uploader';
+import { uploadFile, deleteMessagesThrottled } from '../uploader';
 import { downloadFile } from '../downloader';
 import { DiscordService } from '../discord/discord.service';
 import { FileManifestEntity } from '../database/file-manifest.entity';
 
 interface DownloadJob {
-  buffer: Buffer;
+  /** Absolute path to the downloaded file in a temporary directory. */
+  filePath: string;
   filename: string;
+  /** Cancel the TTL timer, remove from map, and delete the temp directory. */
+  cleanup: () => void;
 }
 
 @Injectable()
 export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
   private readonly downloadJobs = new Map<string, DownloadJob>();
+  private readonly MAX_DOWNLOAD_JOBS = 10;
 
   constructor(
     private readonly discord: DiscordService,
@@ -45,10 +49,12 @@ export class FilesService implements OnModuleInit {
   }
 
   async list(page = 1, limit = 20): Promise<{ data: FileManifestEntity[]; total: number }> {
+    const safePage = Number.isFinite(page) && page >= 1 ? Math.trunc(page) : 1;
+    const safeLimit = Number.isFinite(limit) && limit >= 1 && limit <= 100 ? Math.trunc(limit) : 20;
     const [data, total] = await this.repo.findAndCount({
       order: { uploadedAt: 'DESC' },
-      take: limit,
-      skip: (page - 1) * limit,
+      take: safeLimit,
+      skip: (safePage - 1) * safeLimit,
     });
     return { data, total };
   }
@@ -81,26 +87,56 @@ export class FilesService implements OnModuleInit {
     const entry = await this.repo.findOneBy({ id });
     if (!entry) throw new NotFoundException(`File with id "${id}" not found`);
 
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'drivecord-dl-'));
+    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'drivecord-dl-'));
     try {
-      const outputPath = await downloadFile(this.discord.getClient(), entry, {
+      await downloadFile(this.discord.getClient(), entry, {
         manifestPath: '',
         outputDir: tmpDir,
         onProgress,
         signal,
       });
-      const buffer = fs.readFileSync(outputPath);
-      const jobId = crypto.randomUUID();
-      this.downloadJobs.set(jobId, { buffer, filename: entry.originalFilename });
-      setTimeout(() => this.downloadJobs.delete(jobId), 10 * 60 * 1000);
-      return jobId;
-    } finally {
+    } catch (err) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
+      throw err;
     }
+
+    const outputPath = path.join(tmpDir, entry.originalFilename);
+    const jobId = crypto.randomUUID();
+
+    // Evict the oldest job if we are at capacity to prevent unbounded growth.
+    if (this.downloadJobs.size >= this.MAX_DOWNLOAD_JOBS) {
+      const [, oldestJob] = [...this.downloadJobs.entries()][0];
+      oldestJob.cleanup();
+    }
+
+    // Capture timer ref so cleanup can cancel it if the job is served before TTL.
+    // cleanup is defined first; timer is assigned immediately after and captured
+    // by the closure — safe because cleanup is only ever called after this block.
+    const cleanup = (): void => {
+      clearTimeout(timer);
+      this.downloadJobs.delete(jobId);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    };
+    const timer = setTimeout(cleanup, 10 * 60 * 1000);
+    // Don't prevent the process from exiting cleanly just for a download job TTL.
+    (timer as NodeJS.Timeout & { unref?: () => void }).unref?.();
+
+    this.downloadJobs.set(jobId, {
+      filePath: outputPath,
+      filename: entry.originalFilename,
+      cleanup,
+    });
+    return jobId;
   }
 
   getDownloadJob(jobId: string): DownloadJob | undefined {
     return this.downloadJobs.get(jobId);
+  }
+
+  /** Cancel TTL timer, remove from map, and delete the temp file. */
+  removeDownloadJob(jobId: string): void {
+    const job = this.downloadJobs.get(jobId);
+    if (job) job.cleanup();
   }
 
   async remove(id: string, deleteFromDiscord = false): Promise<void> {
@@ -109,8 +145,9 @@ export class FilesService implements OnModuleInit {
 
     if (deleteFromDiscord) {
       const channel = await this.discord.fetchTextChannel(entry.channelId);
-      await Promise.allSettled(
-        entry.chunks.map((chunk) => channel.messages.delete(chunk.messageId)),
+      await deleteMessagesThrottled(
+        channel,
+        entry.chunks.map((chunk) => chunk.messageId),
       );
     }
 

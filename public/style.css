@@ -454,6 +454,14 @@ main {
 .btn-confirm-discord:hover {
   opacity: 0.88;
 }
+.delete-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 4px 0;
+}
 
 /* ── Pagination ── */
 .pagination {

@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import {
   Controller,
   Get,
@@ -48,7 +49,8 @@ export class FilesController {
     res.flushHeaders();
 
     const abortCtrl = new AbortController();
-    req.on('close', () => abortCtrl.abort());
+    const onClose = () => abortCtrl.abort();
+    req.on('close', onClose);
 
     try {
       writeSSE(res, { type: 'start', filename: file.originalname });
@@ -69,6 +71,7 @@ export class FilesController {
         message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
+      req.off('close', onClose);
       res.end();
     }
   }
@@ -85,7 +88,8 @@ export class FilesController {
     res.flushHeaders();
 
     const abortCtrl = new AbortController();
-    req.on('close', () => abortCtrl.abort());
+    const onClose = () => abortCtrl.abort();
+    req.on('close', onClose);
 
     try {
       writeSSE(res, { type: 'start' });
@@ -106,6 +110,7 @@ export class FilesController {
         message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
+      req.off('close', onClose);
       res.end();
     }
   }
@@ -115,11 +120,16 @@ export class FilesController {
     const job = this.filesService.getDownloadJob(jobId);
     if (!job) throw new NotFoundException('Download job not found or expired');
 
+    const stat = fs.statSync(job.filePath);
     const encodedName = encodeURIComponent(job.filename);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedName}`);
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Length', job.buffer.length);
-    res.send(job.buffer);
+    res.setHeader('Content-Length', stat.size);
+
+    const stream = fs.createReadStream(job.filePath);
+    stream.pipe(res);
+    // Clean up the temp file and job record once the response is fully sent.
+    res.on('finish', () => this.filesService.removeDownloadJob(jobId));
   }
 
   @Delete(':id')

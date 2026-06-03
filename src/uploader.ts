@@ -1,10 +1,33 @@
+import * as fs from 'fs';
+import * as crypto from 'crypto';
 import * as path from 'path';
 import { AttachmentBuilder, TextChannel, type Client } from 'discord.js';
-import { splitFile, hashFile, buildChunkFilename } from './chunker';
+import { buildChunkFilename } from './chunker';
 import { config } from './config';
 import type { Chunk, ChunkRecord, UploadManifest, UploadOptions } from './types';
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Max chunks uploaded concurrently per batch (keeps ≤ CONCURRENCY × chunkSize in RAM). */
+const UPLOAD_CONCURRENCY = 3;
+
+/**
+ * Delete Discord messages in batches to stay within the per-channel rate limit
+ * (Discord allows ~5 delete requests per second per channel).
+ * Ignores individual failures so a missing message never aborts the whole cleanup.
+ */
+export async function deleteMessagesThrottled(
+  channel: TextChannel,
+  messageIds: string[],
+  batchSize = 5,
+  delayMs = 1100,
+): Promise<void> {
+  for (let i = 0; i < messageIds.length; i += batchSize) {
+    const batch = messageIds.slice(i, i + batchSize);
+    await Promise.allSettled(batch.map((id) => channel.messages.delete(id)));
+    if (i + batchSize < messageIds.length) await sleep(delayMs);
+  }
+}
 
 async function uploadChunkWithRetry(
   channel: TextChannel,
@@ -64,39 +87,76 @@ export async function uploadFile(client: Client, options: UploadOptions): Promis
     throw new Error(`Channel ${channelId} not found or is not a text channel.`);
   }
 
-  const chunks = await splitFile(filePath, chunkSize);
-  const totalChunks = chunks.length;
+  // Use fs.stat for size — avoids loading the file into RAM to count bytes.
+  const stat = await fs.promises.stat(filePath);
+  const originalSize = stat.size;
+  const totalChunks = Math.ceil(originalSize / chunkSize);
 
   options.onSplit?.(totalChunks);
 
-  const originalHash = await hashFile(filePath);
-  const originalSize = chunks.reduce((sum, c) => sum + c.data.length, 0);
+  const overallHasher = crypto.createHash('sha256');
+  const completedRecords: ChunkRecord[] = [];
 
-  const chunkRecords: ChunkRecord[] = [];
-
+  // Open the file once; read each batch of CONCURRENCY chunks directly from disk.
+  const fileHandle = await fs.promises.open(filePath, 'r');
   try {
-    for (const chunk of chunks) {
+    for (let batchStart = 0; batchStart < totalChunks; batchStart += UPLOAD_CONCURRENCY) {
       options.signal?.throwIfAborted();
-      const chunkFilename = buildChunkFilename(originalFilename, chunk.index, totalChunks);
 
-      const record = await uploadChunkWithRetry(
-        channel,
-        chunk,
-        chunkFilename,
-        config.uploadRetries,
-        config.retryDelayMs,
-        options.onRetry,
-        options.signal,
+      const batchSize = Math.min(UPLOAD_CONCURRENCY, totalChunks - batchStart);
+      const batchChunks: Chunk[] = [];
+
+      // Read next batch from disk (sequential, in-order for correct hash accumulation).
+      for (let j = 0; j < batchSize; j++) {
+        const i = batchStart + j;
+        const offset = i * chunkSize;
+        const length = Math.min(chunkSize, originalSize - offset);
+        const buffer = Buffer.allocUnsafe(length);
+        await fileHandle.read(buffer, 0, length, offset);
+        const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+        overallHasher.update(buffer);
+        batchChunks.push({ index: i, data: buffer, hash });
+      }
+
+      // Upload batch concurrently; allSettled ensures we capture every completed record
+      // even when one task fails — critical for correct rollback on abort.
+      const batchResults = await Promise.allSettled(
+        batchChunks.map((chunk) => {
+          const chunkFilename = buildChunkFilename(originalFilename, chunk.index, totalChunks);
+          return uploadChunkWithRetry(
+            channel,
+            chunk,
+            chunkFilename,
+            config.uploadRetries,
+            config.retryDelayMs,
+            options.onRetry,
+            options.signal,
+          );
+        }),
       );
-      chunkRecords.push(record);
-      options.onProgress?.(chunkRecords.length, totalChunks);
+
+      let batchError: unknown = null;
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          completedRecords.push(result.value);
+        } else if (!batchError) {
+          batchError = result.reason;
+        }
+      }
+      options.onProgress?.(completedRecords.length, totalChunks);
+      if (batchError) throw batchError;
     }
   } catch (err) {
-    if ((err as { name?: string })?.name === 'AbortError' && chunkRecords.length > 0) {
-      await Promise.allSettled(chunkRecords.map((r) => channel.messages.delete(r.messageId)));
+    if ((err as { name?: string })?.name === 'AbortError' && completedRecords.length > 0) {
+      await Promise.allSettled(completedRecords.map((r) => channel.messages.delete(r.messageId)));
     }
     throw err;
+  } finally {
+    await fileHandle.close();
   }
+
+  const originalHash = overallHasher.digest('hex');
+  completedRecords.sort((a, b) => a.index - b.index);
 
   const manifest: UploadManifest = {
     version: 1,
@@ -107,7 +167,7 @@ export async function uploadFile(client: Client, options: UploadOptions): Promis
     originalHash,
     channelId,
     uploadedAt: new Date().toISOString(),
-    chunks: chunkRecords,
+    chunks: completedRecords,
   };
 
   return manifest;
