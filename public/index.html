@@ -65,6 +65,25 @@
       </div>
     </div>
 
+    <!-- File detail modal -->
+    <div class="overlay" id="detailOverlay" onclick="closeDetailModal(event)">
+      <div class="modal detail-modal">
+        <button class="detail-close" onclick="closeDetailModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="detail-modal-header">
+          <div class="modal-icon">
+            <i class="fa-solid fa-circle-info"></i>
+          </div>
+          <h3 id="detailTitle"></h3>
+          <div class="detail-meta" id="detailMeta"></div>
+          <div class="detail-hash" id="detailHash"></div>
+        </div>
+        <div class="detail-section-label">청크 목록</div>
+        <div class="detail-chunks" id="detailChunks"></div>
+      </div>
+    </div>
+
     <!-- Delete confirm modal -->
     <div class="overlay" id="deleteOverlay">
       <div class="modal confirm-modal">

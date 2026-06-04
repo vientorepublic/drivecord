@@ -115,6 +115,11 @@ export class FilesController {
     }
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.filesService.findOne(id);
+  }
+
   @Get('job/:jobId')
   serveJob(@Param('jobId') jobId: string, @Res() res: Response): void {
     const job = this.filesService.getDownloadJob(jobId);

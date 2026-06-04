@@ -47,7 +47,7 @@ function renderFiles() {
       <td>
         <div class="file-name">
           ${fileIcon(f.originalFilename)}
-          <span class="file-name-text" title="${esc(f.originalFilename)}">${esc(f.originalFilename)}</span>
+          <button class="file-name-btn" onclick="openDetail('${esc(f.id)}')" title="상세 정보 보기">${esc(f.originalFilename)}</button>
           <span class="chip">${f.totalChunks}청크</span>
         </div>
       </td>
@@ -256,6 +256,56 @@ async function confirmDelete(withDiscord) {
     actions.innerHTML = originalHTML;
     showToast('삭제 실패: ' + err.message, 'error');
   }
+}
+
+// ── Detail modal ──────────────────────────────────────────────────────────────
+async function openDetail(id) {
+  try {
+    const res = await fetch(`/api/files/${id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const f = await res.json();
+
+    document.getElementById('detailTitle').textContent = f.originalFilename;
+    document.getElementById('detailHash').textContent = 'SHA-256: ' + f.originalHash;
+
+    document.getElementById('detailMeta').innerHTML = [
+      ['크기', fmtBytes(f.originalSize)],
+      ['청크 수', `${f.totalChunks}개 (${fmtBytes(f.chunkSize)}/Chunk)`],
+      ['업로드 일시', fmtDate(f.uploadedAt)],
+      ['채널 ID', f.channelId],
+    ]
+      .map(
+        ([k, v]) =>
+          `<span class="detail-meta-key">${k}</span><span class="detail-meta-val" title="${v}">${v}</span>`,
+      )
+      .join('');
+
+    const sorted = [...f.chunks].sort((a, b) => a.index - b.index);
+    document.getElementById('detailChunks').innerHTML = `
+      <table>
+        <thead><tr><th>#</th><th>파일명</th><th>크기</th><th>해시 (SHA-256)</th></tr></thead>
+        <tbody>${sorted
+          .map(
+            (c) => `<tr>
+          <td class="chunk-idx">${c.index + 1}</td>
+          <td>${esc(c.filename)}</td>
+          <td>${fmtBytes(c.size)}</td>
+          <td class="chunk-hash" title="${c.hash}">${c.hash}</td>
+        </tr>`,
+          )
+          .join('')}</tbody>
+      </table>`;
+
+    document.getElementById('detailOverlay').classList.add('show');
+  } catch (err) {
+    showToast('상세 정보 로드 실패: ' + err.message, 'error');
+  }
+}
+
+function closeDetailModal(e) {
+  // e가 있으면 overlay 배경 클릭일 때만 닫음
+  if (e && e.target !== document.getElementById('detailOverlay')) return;
+  document.getElementById('detailOverlay').classList.remove('show');
 }
 
 // ── Cancel ────────────────────────────────────────────────────────────────────

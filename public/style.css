@@ -194,6 +194,26 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.file-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+.file-name-btn:hover {
+  color: var(--accent-h);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .file-icon {
   font-size: 15px;
   color: var(--muted);
@@ -461,6 +481,129 @@ main {
   color: var(--muted);
   font-size: 0.9rem;
   padding: 4px 0;
+}
+
+/* ── Detail modal ── */
+.detail-modal {
+  width: 560px;
+  /* Cap modal height and let flex children scroll, not the modal itself */
+  max-height: min(80vh, 700px);
+  height: min(80vh, 700px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* Override base modal padding — sections manage their own spacing */
+  padding: 0;
+  overflow: hidden;
+}
+/* Scrollable header area (everything above chunk list) */
+.detail-modal-header {
+  padding: 28px 32px 16px;
+  flex-shrink: 0;
+}
+.detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.detail-close:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.detail-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.detail-meta-row {
+  display: contents;
+}
+.detail-meta-key {
+  color: var(--muted);
+}
+.detail-meta-val {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-hash {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: monospace;
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  word-break: break-all;
+  margin-bottom: 16px;
+}
+.detail-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  padding: 0 32px;
+  flex-shrink: 0;
+}
+.detail-chunks {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0; /* required for flex child to shrink below content size */
+  margin: 0 32px 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.detail-chunks table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.detail-chunks th {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-chunks td {
+  padding: 7px 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.detail-chunks tr:last-child td {
+  border-bottom: none;
+}
+.detail-chunks tr:hover td {
+  background: var(--surface2);
+}
+.chunk-hash {
+  font-family: monospace;
+  color: var(--muted);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chunk-idx {
+  color: var(--muted);
+  width: 36px;
 }
 
 /* ── Pagination ── */

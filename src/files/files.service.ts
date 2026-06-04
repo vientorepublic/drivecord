@@ -59,6 +59,12 @@ export class FilesService implements OnModuleInit {
     return { data, total };
   }
 
+  async findOne(id: string): Promise<FileManifestEntity> {
+    const entry = await this.repo.findOneBy({ id });
+    if (!entry) throw new NotFoundException(`File with id "${id}" not found`);
+    return entry;
+  }
+
   async upload(
     file: Express.Multer.File,
     onProgress?: (done: number, total: number) => void,
