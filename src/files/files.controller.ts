@@ -6,18 +6,17 @@ import {
   Delete,
   Param,
   Query,
-  Req,
   Res,
   UploadedFile,
   UseInterceptors,
   NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { FilesService } from './files.service';
 
 function writeSSE(res: Response, data: object): void {
-  if (!res.writableEnded) {
+  if (!res.writableEnded && !res.destroyed) {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   }
 }
@@ -33,11 +32,7 @@ export class FilesController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async upload(
-    @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response,
-    @Req() req: Request,
-  ): Promise<void> {
+  async upload(@UploadedFile() file: Express.Multer.File, @Res() res: Response): Promise<void> {
     if (!file) {
       res.status(400).json({ message: 'No file provided' });
       return;
@@ -50,7 +45,7 @@ export class FilesController {
 
     const abortCtrl = new AbortController();
     const onClose = () => abortCtrl.abort();
-    req.on('close', onClose);
+    res.on('close', onClose);
 
     try {
       writeSSE(res, { type: 'start', filename: file.originalname });
@@ -71,17 +66,13 @@ export class FilesController {
         message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
-      req.off('close', onClose);
-      res.end();
+      res.off('close', onClose);
+      if (!res.writableEnded) res.end();
     }
   }
 
   @Post(':id/download')
-  async startDownload(
-    @Param('id') id: string,
-    @Res() res: Response,
-    @Req() req: Request,
-  ): Promise<void> {
+  async startDownload(@Param('id') id: string, @Res() res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Accel-Buffering', 'no');
@@ -89,7 +80,7 @@ export class FilesController {
 
     const abortCtrl = new AbortController();
     const onClose = () => abortCtrl.abort();
-    req.on('close', onClose);
+    res.on('close', onClose);
 
     try {
       writeSSE(res, { type: 'start' });
@@ -110,8 +101,8 @@ export class FilesController {
         message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
       });
     } finally {
-      req.off('close', onClose);
-      res.end();
+      res.off('close', onClose);
+      if (!res.writableEnded) res.end();
     }
   }
 

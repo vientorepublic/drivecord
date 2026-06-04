@@ -120,6 +120,7 @@ export async function uploadFile(client: Client, options: UploadOptions): Promis
 
       // Upload batch concurrently; allSettled ensures we capture every completed record
       // even when one task fails — critical for correct rollback on abort.
+      // Each chunk calls onProgress immediately on completion to avoid batch-level SSE delay.
       const batchResults = await Promise.allSettled(
         batchChunks.map((chunk) => {
           const chunkFilename = buildChunkFilename(originalFilename, chunk.index, totalChunks);
@@ -131,21 +132,26 @@ export async function uploadFile(client: Client, options: UploadOptions): Promis
             config.retryDelayMs,
             options.onRetry,
             options.signal,
-          );
+          ).then((record) => {
+            completedRecords.push(record);
+            options.onProgress?.(completedRecords.length, totalChunks);
+            return record;
+          });
         }),
       );
 
       let batchError: unknown = null;
       for (const result of batchResults) {
-        if (result.status === 'fulfilled') {
-          completedRecords.push(result.value);
-        } else if (!batchError) {
+        if (result.status === 'rejected' && !batchError) {
           batchError = result.reason;
         }
       }
-      options.onProgress?.(completedRecords.length, totalChunks);
       if (batchError) throw batchError;
     }
+    // Final abort check after the last batch completes: channel.send() calls inside the
+    // last batch are not cancellable once started, so the loop may finish normally even
+    // though the signal was aborted during the last batch's network I/O.
+    options.signal?.throwIfAborted();
   } catch (err) {
     if ((err as { name?: string })?.name === 'AbortError' && completedRecords.length > 0) {
       await Promise.allSettled(completedRecords.map((r) => channel.messages.delete(r.messageId)));

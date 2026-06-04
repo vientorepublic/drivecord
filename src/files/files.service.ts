@@ -77,6 +77,10 @@ export class FilesService implements OnModuleInit {
         onProgress,
         signal,
       });
+      // Guard against the race where all chunks finished just before the client
+      // cancelled: uploadFile may return successfully if the abort signal arrived
+      // after the last chunk's network call completed but before this line.
+      signal?.throwIfAborted();
       manifest.originalFilename = file.originalname;
       const entity = this.repo.create({ ...manifest, id: crypto.randomUUID() });
       return this.repo.save(entity);
