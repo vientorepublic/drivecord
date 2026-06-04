@@ -331,6 +331,30 @@ main {
   color: var(--accent);
   margin-bottom: 12px;
 }
+/* Animate icon only in the progress overlay, not in detail/delete modals */
+#overlay.show .modal-icon {
+  animation:
+    iconFloat 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite,
+    iconGlow 2.8s ease-in-out infinite;
+}
+@keyframes iconFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes iconGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(124, 58, 237, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.65));
+  }
+}
 .modal h3 {
   font-size: 18px;
   font-weight: 700;
@@ -347,27 +371,53 @@ main {
 .progress-track {
   background: var(--surface2);
   border-radius: 99px;
-  height: 8px;
+  height: 10px;
   overflow: hidden;
   margin-bottom: 10px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), #a855f7);
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    #a855f7 40%,
+    #c084fc 60%,
+    var(--accent) 100%
+  );
+  background-size: 300% 100%;
   border-radius: 99px;
   transition: width 0.35s ease;
   width: 0%;
+  animation: progressShimmer 2.5s linear infinite;
+}
+@keyframes progressShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 .progress-fill.indeterminate {
   width: 40% !important;
-  animation: slide 1.4s ease-in-out infinite;
+  transition: none;
+  background: linear-gradient(
+    90deg,
+    rgba(124, 58, 237, 0) 0%,
+    var(--accent) 30%,
+    #c084fc 55%,
+    rgba(168, 85, 247, 0) 100%
+  );
+  background-size: 100% 100%;
+  animation: indeterminate 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-@keyframes slide {
+@keyframes indeterminate {
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-150%);
   }
   100% {
-    transform: translateX(350%);
+    transform: translateX(400%);
   }
 }
 .progress-label {
@@ -376,11 +426,14 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 .progress-pct {
   font-weight: 700;
-  color: var(--text);
-  font-size: 14px;
+  color: var(--accent-h);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 /* ── Toasts ── */
@@ -657,10 +710,14 @@ main {
   border: 1px solid var(--border);
   font-size: 13px;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    color 0.18s,
+    border-color 0.18s,
+    background 0.18s,
+    box-shadow 0.25s;
 }
 .btn-cancel-op:hover {
   color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.6);
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.18);
 }
