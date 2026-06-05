@@ -30,8 +30,11 @@ export class FilesService implements OnModuleInit {
     private readonly repo: Repository<FileManifestEntity>,
   ) {}
 
-  /** 기존 manifests.json이 있으면 DB로 이관 후 .migrated로 이름 변경 */
   async onModuleInit(): Promise<void> {
+    await this.migrateOldManifests();
+  }
+
+  private async migrateOldManifests(): Promise<void> {
     const jsonPath = path.join(process.cwd(), 'data', 'manifests.json');
     if (!fs.existsSync(jsonPath)) return;
 
@@ -40,11 +43,11 @@ export class FilesService implements OnModuleInit {
       const entries: FileManifestEntity[] = JSON.parse(raw);
       if (Array.isArray(entries) && entries.length > 0) {
         await this.repo.save(entries);
-        this.logger.log(`manifests.json → DB: ${entries.length}개 항목 마이그레이션 완료`);
+        this.logger.log(`manifests.json → DB: ${entries.length} entries migrated`);
       }
       fs.renameSync(jsonPath, jsonPath + '.migrated');
     } catch (err) {
-      this.logger.warn('manifests.json 마이그레이션 실패: ' + String(err));
+      this.logger.warn('manifests.json migration failed: ' + String(err));
     }
   }
 
