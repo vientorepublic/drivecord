@@ -1,5 +1,9 @@
 # DriveCord
 
+<img width="549" height="113" alt="drivecord_logo" src="https://github.com/user-attachments/assets/c66de798-9469-428b-87be-a6cc29ed019a" />
+
+https://github.com/user-attachments/assets/edff9b94-afcc-43a1-828c-940430d27e19
+
 Discord를 무료 파일 저장소로 사용합니다. DriveCord는 대용량 파일을 청크로 분할해 Discord 메시지 첨부파일로 업로드하고, 다운로드 시 병합하여 복원합니다. 모든 과정에서 SHA-256 무결성 검증을 수행합니다.
 
 로컬 웹 UI를 통해 파일 업로드·다운로드·삭제를 브라우저에서 직접 관리할 수 있으며, 파일 매니페스트는 SQLite 데이터베이스로 영속 관리됩니다.
