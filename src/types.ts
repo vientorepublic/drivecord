@@ -1,3 +1,11 @@
+export enum SseEventType {
+  Start = 'start',
+  Progress = 'progress',
+  Done = 'done',
+  Ready = 'ready',
+  Error = 'error',
+}
+
 export interface ChunkRecord {
   index: number;
   messageId: string;

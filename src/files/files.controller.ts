@@ -13,13 +13,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { SseEventType } from '../types';
+import { setupSseResponse, runSseHandler } from './sse.helper';
 import { FilesService } from './files.service';
-
-function writeSSE(res: Response, data: object): void {
-  if (!res.writableEnded && !res.destroyed) {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  }
-}
 
 @Controller('api/files')
 export class FilesController {
@@ -38,72 +34,36 @@ export class FilesController {
       return;
     }
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
+    setupSseResponse(res);
 
-    const abortCtrl = new AbortController();
-    const onClose = () => abortCtrl.abort();
-    res.on('close', onClose);
-
-    try {
-      writeSSE(res, { type: 'start', filename: file.originalname });
+    await runSseHandler(res, async (signal, write) => {
+      write({ type: SseEventType.Start, filename: file.originalname });
 
       const entry = await this.filesService.upload(
         file,
-        (done, total) => {
-          writeSSE(res, { type: 'progress', done, total });
-        },
-        abortCtrl.signal,
+        (done, total) => write({ type: SseEventType.Progress, done, total }),
+        signal,
       );
 
-      writeSSE(res, { type: 'done', file: entry });
-    } catch (err) {
-      const isAbort = (err as { name?: string })?.name === 'AbortError';
-      writeSSE(res, {
-        type: 'error',
-        message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      res.off('close', onClose);
-      if (!res.writableEnded) res.end();
-    }
+      write({ type: SseEventType.Done, file: entry });
+    });
   }
 
   @Post(':id/download')
   async startDownload(@Param('id') id: string, @Res() res: Response): Promise<void> {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
+    setupSseResponse(res);
 
-    const abortCtrl = new AbortController();
-    const onClose = () => abortCtrl.abort();
-    res.on('close', onClose);
-
-    try {
-      writeSSE(res, { type: 'start' });
+    await runSseHandler(res, async (signal, write) => {
+      write({ type: SseEventType.Start });
 
       const jobId = await this.filesService.startDownload(
         id,
-        (done, total) => {
-          writeSSE(res, { type: 'progress', done, total });
-        },
-        abortCtrl.signal,
+        (done, total) => write({ type: SseEventType.Progress, done, total }),
+        signal,
       );
 
-      writeSSE(res, { type: 'ready', jobId });
-    } catch (err) {
-      const isAbort = (err as { name?: string })?.name === 'AbortError';
-      writeSSE(res, {
-        type: 'error',
-        message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      res.off('close', onClose);
-      if (!res.writableEnded) res.end();
-    }
+      write({ type: SseEventType.Ready, jobId });
+    });
   }
 
   @Get(':id')
@@ -124,7 +84,6 @@ export class FilesController {
 
     const stream = fs.createReadStream(job.filePath);
     stream.pipe(res);
-    // Clean up the temp file and job record once the response is fully sent.
     res.on('finish', () => this.filesService.removeDownloadJob(jobId));
   }
 
