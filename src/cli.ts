@@ -19,6 +19,8 @@ export const C = {
 // ── Custom NestJS logger ──────────────────────────────────────────────────────
 
 export class DriveCordLogger implements LoggerService {
+  constructor(private readonly debugEnabled = false) {}
+
   private static fmt(
     level: string,
     levelColor: string,
@@ -54,10 +56,12 @@ export class DriveCordLogger implements LoggerService {
   }
 
   debug(message: unknown, context?: unknown): void {
+    if (!this.debugEnabled) return;
     process.stdout.write(DriveCordLogger.fmt('DEBUG', C.gray, message, context) + '\n');
   }
 
   verbose(message: unknown, context?: unknown): void {
+    if (!this.debugEnabled) return;
     process.stdout.write(DriveCordLogger.fmt('VERB', C.magenta, message, context) + '\n');
   }
 
@@ -90,7 +94,12 @@ export function printBanner(): void {
   process.stdout.write(lines.join('\n') + '\n');
 }
 
-export function printReady(port: number): void {
+export function printReady(port: number, debug = false): void {
   const url = `http://localhost:${port}`;
-  process.stdout.write(`  ${C.cyan}${C.bold}Ready${C.reset}  →  ${C.white}${url}${C.reset}\n\n`);
+  const debugBadge = debug
+    ? `  ${C.yellow}${C.bold}DEBUG${C.reset}${C.yellow} mode — verbose logging enabled${C.reset}`
+    : '';
+  process.stdout.write(
+    `  ${C.cyan}${C.bold}Ready${C.reset}  →  ${C.white}${url}${C.reset}${debugBadge}\n\n`,
+  );
 }

@@ -27,4 +27,5 @@ export const config = {
   chunkSize: rawChunkSize,
   uploadRetries: parseInt(process.env.UPLOAD_RETRIES ?? '3', 10),
   retryDelayMs: parseInt(process.env.RETRY_DELAY_MS ?? '2000', 10),
+  debug: process.env.DEBUG === 'true',
 } as const;

@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { exec } from 'child_process';
 import { AppModule } from './app.module';
 import { DriveCordLogger, printBanner, printReady } from './cli';
+import { config } from './config';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
@@ -20,14 +21,14 @@ function openBrowser(url: string): void {
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    logger: new DriveCordLogger(),
+    logger: new DriveCordLogger(config.debug),
   });
 
   await app.listen(PORT);
 
   printBanner();
 
-  printReady(PORT);
+  printReady(PORT, config.debug);
   openBrowser(`http://localhost:${PORT}`);
 }
 

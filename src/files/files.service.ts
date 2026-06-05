@@ -74,11 +74,18 @@ export class FilesService implements OnModuleInit {
     signal?: AbortSignal,
   ): Promise<FileManifestEntity> {
     const tmpPath = file.path;
+    const t0 = Date.now();
+    this.logger.debug(
+      `Upload started — "${file.originalname}" (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+    );
     try {
       const manifest = await uploadFile(this.discord.getClient(), {
         filePath: tmpPath,
         onProgress,
         signal,
+        onRetry: (chunkIndex, attempt, maxRetries) => {
+          this.logger.debug(`Chunk ${chunkIndex} retry ${attempt + 1}/${maxRetries}`);
+        },
       });
       // Guard against the race where all chunks finished just before the client
       // cancelled: uploadFile may return successfully if the abort signal arrived
@@ -86,7 +93,11 @@ export class FilesService implements OnModuleInit {
       signal?.throwIfAborted();
       manifest.originalFilename = file.originalname;
       const entity = this.repo.create({ ...manifest, id: crypto.randomUUID() });
-      return this.repo.save(entity);
+      const saved = await this.repo.save(entity);
+      this.logger.debug(
+        `Upload done — ${manifest.totalChunks} chunks, ${Date.now() - t0}ms, id=${saved.id}`,
+      );
+      return saved;
     } finally {
       fs.rmSync(tmpPath, { force: true });
     }
@@ -100,6 +111,11 @@ export class FilesService implements OnModuleInit {
     const entry = await this.repo.findOneBy({ id });
     if (!entry) throw new NotFoundException(`File with id "${id}" not found`);
 
+    const t0 = Date.now();
+    this.logger.debug(
+      `Download started — "${entry.originalFilename}" (${entry.totalChunks} chunks)`,
+    );
+
     const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'drivecord-dl-'));
     try {
       await downloadFile(this.discord.getClient(), entry, {
@@ -112,6 +128,7 @@ export class FilesService implements OnModuleInit {
       fs.rmSync(tmpDir, { recursive: true, force: true });
       throw err;
     }
+    this.logger.debug(`Download done — ${Date.now() - t0}ms`);
 
     const outputPath = path.join(tmpDir, entry.originalFilename);
     const jobId = crypto.randomUUID();
