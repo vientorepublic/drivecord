@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { exec } from 'child_process';
 import { AppModule } from './app.module';
+import { DriveCordLogger, printBanner, printReady } from './cli';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
@@ -19,14 +20,15 @@ function openBrowser(url: string): void {
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: new DriveCordLogger(),
   });
 
   await app.listen(PORT);
 
-  const url = `http://localhost:${PORT}`;
-  console.log(`\n  DriveCord Web UI  →  ${url}\n`);
-  openBrowser(url);
+  printBanner();
+
+  printReady(PORT);
+  openBrowser(`http://localhost:${PORT}`);
 }
 
 bootstrap().catch((err: unknown) => {
