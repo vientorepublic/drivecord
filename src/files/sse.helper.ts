@@ -38,7 +38,7 @@ export async function runSseHandler(
     const isAbort = (err as { name?: string })?.name === 'AbortError';
     writeSSE(res, {
       type: SseEventType.Error,
-      message: isAbort ? '취소됨' : err instanceof Error ? err.message : String(err),
+      message: isAbort ? 'Cancelled' : err instanceof Error ? err.message : String(err),
     });
   } finally {
     res.off('close', onClose);

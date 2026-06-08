@@ -25,7 +25,7 @@ async function loadFiles(page = currentPage) {
     renderFiles();
     renderPagination();
   } catch (err) {
-    showToast('파일 목록 로드 실패: ' + err.message, 'error');
+    showToast('Failed to load file list: ' + err.message, 'error');
   }
 }
 
@@ -35,7 +35,7 @@ function renderFiles() {
     el.innerHTML = `
       <div class="empty">
         <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
-        <p>업로드된 파일이 없습니다</p>
+        <p>No files uploaded yet</p>
       </div>`;
     return;
   }
@@ -47,8 +47,8 @@ function renderFiles() {
       <td>
         <div class="file-name">
           ${fileIcon(f.originalFilename)}
-          <button class="file-name-btn" onclick="openDetail('${esc(f.id)}')" title="상세 정보 보기">${esc(f.originalFilename)}</button>
-          <span class="chip">${f.totalChunks}청크</span>
+          <button class="file-name-btn" onclick="openDetail('${esc(f.id)}')" title="View details">${esc(f.originalFilename)}</button>
+          <span class="chip">${f.totalChunks} chunks</span>
         </div>
       </td>
       <td class="col-muted">${fmtBytes(f.originalSize)}</td>
@@ -56,7 +56,7 @@ function renderFiles() {
       <td>
         <div class="actions">
           <button class="btn btn-dl" onclick="startDownload('${esc(f.id)}','${esc(f.originalFilename)}')">
-            <i class="fa-solid fa-download"></i> 다운로드
+            <i class="fa-solid fa-download"></i> Download
           </button>
           <button class="btn btn-del" onclick="deleteFile('${esc(f.id)}')">
             <i class="fa-solid fa-trash"></i>
@@ -71,7 +71,7 @@ function renderFiles() {
     <table>
       <thead>
         <tr>
-          <th>파일명</th><th>크기</th><th>업로드 일시</th><th>작업</th>
+          <th>Filename</th><th>Size</th><th>Uploaded At</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -128,7 +128,7 @@ function setupUploadZone() {
 async function handleUpload(file) {
   const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB
   if (file.size > MAX_SIZE) {
-    showToast(`파일 크기(${fmtBytes(file.size)})가 2 GB 제한을 초과합니다`, 'error');
+    showToast(`File size (${fmtBytes(file.size)}) exceeds the 2 GB limit`, 'error');
     return;
   }
 
@@ -136,7 +136,7 @@ async function handleUpload(file) {
   fd.append('file', file);
 
   showOverlay('upload', file.name);
-  setProgress(0, 1, 'Discord에 연결 중...');
+  setProgress(0, 1, 'Connecting to Discord...');
 
   activeAbortCtrl = new AbortController();
   const signal = activeAbortCtrl.signal;
@@ -146,17 +146,17 @@ async function handleUpload(file) {
     await readSSE(
       res,
       (ev) => {
-        if (ev.type === 'start') setProgress(0, 1, 'Discord에 연결 중...');
+        if (ev.type === 'start') setProgress(0, 1, 'Connecting to Discord...');
         if (ev.type === 'progress')
-          setProgress(ev.done, ev.total, `청크 업로드 중 ${ev.done}/${ev.total}`);
+          setProgress(ev.done, ev.total, `Uploading chunk ${ev.done}/${ev.total}`);
         if (ev.type === 'done') {
           hideOverlay();
           loadFiles(1);
-          showToast(`${ev.file.originalFilename} 업로드 완료`, 'success');
+          showToast(`${ev.file.originalFilename} uploaded successfully`, 'success');
         }
         if (ev.type === 'error' && !signal.aborted) {
           hideOverlay();
-          showToast('업로드 실패: ' + ev.message, 'error');
+          showToast('Upload failed: ' + ev.message, 'error');
         }
       },
       signal,
@@ -164,7 +164,7 @@ async function handleUpload(file) {
   } catch (err) {
     if (!signal.aborted) {
       hideOverlay();
-      showToast('업로드 오류: ' + err.message, 'error');
+      showToast('Upload error: ' + err.message, 'error');
     }
   } finally {
     activeAbortCtrl = null;
@@ -174,7 +174,7 @@ async function handleUpload(file) {
 // ── Download ──────────────────────────────────────────────────────────────────
 async function startDownload(id, filename) {
   showOverlay('download', filename);
-  setProgress(0, 1, 'Discord에서 다운로드 중...');
+  setProgress(0, 1, 'Downloading from Discord...');
 
   activeAbortCtrl = new AbortController();
   const signal = activeAbortCtrl.signal;
@@ -185,7 +185,7 @@ async function startDownload(id, filename) {
       res,
       (ev) => {
         if (ev.type === 'progress')
-          setProgress(ev.done, ev.total, `청크 다운로드 중 ${ev.done}/${ev.total}`);
+          setProgress(ev.done, ev.total, `Downloading chunk ${ev.done}/${ev.total}`);
         if (ev.type === 'ready') {
           hideOverlay();
           const a = document.createElement('a');
@@ -194,11 +194,11 @@ async function startDownload(id, filename) {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          showToast(`${filename} 다운로드 완료`, 'success');
+          showToast(`${filename} downloaded successfully`, 'success');
         }
         if (ev.type === 'error' && !signal.aborted) {
           hideOverlay();
-          showToast('다운로드 실패: ' + ev.message, 'error');
+          showToast('Download failed: ' + ev.message, 'error');
         }
       },
       signal,
@@ -206,7 +206,7 @@ async function startDownload(id, filename) {
   } catch (err) {
     if (!signal.aborted) {
       hideOverlay();
-      showToast('다운로드 오류: ' + err.message, 'error');
+      showToast('Download error: ' + err.message, 'error');
     }
   } finally {
     activeAbortCtrl = null;
@@ -236,7 +236,7 @@ async function confirmDelete(withDiscord) {
   // Show loading state inside the modal while the request is in flight.
   const actions = document.querySelector('#deleteOverlay .confirm-actions');
   const originalHTML = actions.innerHTML;
-  actions.innerHTML = `<span class="delete-loading"><i class="fa-solid fa-spinner fa-spin"></i> 삭제 중...</span>`;
+  actions.innerHTML = `<span class="delete-loading"><i class="fa-solid fa-spinner fa-spin"></i> Deleting...</span>`;
 
   try {
     const url = `/api/files/${id}${withDiscord ? '?discord=true' : ''}`;
@@ -247,14 +247,11 @@ async function confirmDelete(withDiscord) {
     const remaining = files.filter((f) => f.id !== id).length;
     const newPage = remaining === 0 && currentPage > 1 ? currentPage - 1 : currentPage;
     await loadFiles(newPage);
-    showToast(
-      withDiscord ? '파일 및 Discord 청크가 삭제되었습니다' : '파일 항목이 삭제되었습니다',
-      'info',
-    );
+    showToast(withDiscord ? 'File and Discord chunks deleted' : 'File entry deleted', 'info');
   } catch (err) {
     // Restore buttons so the user can retry or cancel.
     actions.innerHTML = originalHTML;
-    showToast('삭제 실패: ' + err.message, 'error');
+    showToast('Delete failed: ' + err.message, 'error');
   }
 }
 
@@ -269,10 +266,10 @@ async function openDetail(id) {
     document.getElementById('detailHash').textContent = 'SHA-256: ' + f.originalHash;
 
     document.getElementById('detailMeta').innerHTML = [
-      ['크기', fmtBytes(f.originalSize)],
-      ['청크 수', `${f.totalChunks}개 (${fmtBytes(f.chunkSize)}/Chunk)`],
-      ['업로드 일시', fmtDate(f.uploadedAt)],
-      ['채널 ID', f.channelId],
+      ['Size', fmtBytes(f.originalSize)],
+      ['Chunks', `${f.totalChunks} (${fmtBytes(f.chunkSize)}/chunk)`],
+      ['Uploaded At', fmtDate(f.uploadedAt)],
+      ['Channel ID', f.channelId],
     ]
       .map(
         ([k, v]) =>
@@ -283,7 +280,7 @@ async function openDetail(id) {
     const sorted = [...f.chunks].sort((a, b) => a.index - b.index);
     document.getElementById('detailChunks').innerHTML = `
       <table>
-        <thead><tr><th>#</th><th>파일명</th><th>크기</th><th>해시 (SHA-256)</th></tr></thead>
+        <thead><tr><th>#</th><th>Filename</th><th>Size</th><th>Hash (SHA-256)</th></tr></thead>
         <tbody>${sorted
           .map(
             (c) => `<tr>
@@ -298,12 +295,12 @@ async function openDetail(id) {
 
     document.getElementById('detailOverlay').classList.add('show');
   } catch (err) {
-    showToast('상세 정보 로드 실패: ' + err.message, 'error');
+    showToast('Failed to load file details: ' + err.message, 'error');
   }
 }
 
 function closeDetailModal(e) {
-  // e가 있으면 overlay 배경 클릭일 때만 닫음
+  // If e is provided, only close when clicking the overlay background
   if (e && e.target !== document.getElementById('detailOverlay')) return;
   document.getElementById('detailOverlay').classList.remove('show');
 }
@@ -313,7 +310,7 @@ function cancelOperation() {
   if (activeAbortCtrl) {
     activeAbortCtrl.abort();
     hideOverlay();
-    showToast('작업이 취소되었습니다', 'info');
+    showToast('Operation cancelled', 'info');
   }
 }
 
@@ -365,11 +362,11 @@ function showOverlay(type, filename) {
       ? '<i class="fa-solid fa-cloud-arrow-up"></i>'
       : '<i class="fa-solid fa-cloud-arrow-down"></i>';
   document.getElementById('modalTitle').textContent =
-    type === 'upload' ? '업로드 중...' : '다운로드 중...';
+    type === 'upload' ? 'Uploading...' : 'Downloading...';
   document.getElementById('modalFilename').textContent = filename;
   document.getElementById('progressFill').classList.add('indeterminate');
   document.getElementById('progressPct').textContent = '';
-  document.getElementById('progressLabel').textContent = '연결 중...';
+  document.getElementById('progressLabel').textContent = 'Connecting...';
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -390,7 +387,7 @@ function setProgress(done, total, baseLabel) {
     if (elapsed > 500) {
       const rate = done / elapsed; // chunks per ms
       const remaining = (total - done) / rate;
-      label += '  ·  남은 시간: ' + fmtDuration(remaining);
+      label += '  \u00b7  Time remaining: ' + fmtDuration(remaining);
     }
   }
 
@@ -425,18 +422,18 @@ function fmtBytes(b) {
 function fmtDate(iso) {
   const d = new Date(iso);
   return (
-    d.toLocaleDateString('ko-KR') +
+    d.toLocaleDateString('en-US') +
     '  ' +
-    d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   );
 }
 
 function fmtDuration(ms) {
   const s = Math.ceil(ms / 1000);
-  if (s < 60) return `약 ${s}초`;
+  if (s < 60) return `~${s}s`;
   const m = Math.floor(s / 60);
   const rem = s % 60;
-  return rem > 0 ? `약 ${m}분 ${rem}초` : `약 ${m}분`;
+  return rem > 0 ? `~${m}m ${rem}s` : `~${m}m`;
 }
 
 function fileIcon(name) {

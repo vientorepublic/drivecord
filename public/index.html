@@ -21,22 +21,24 @@
     <main>
       <div class="upload-card" id="uploadZone">
         <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-        <div class="upload-title">파일을 드래그하거나 클릭하여 업로드</div>
-        <div class="upload-hint">Discord 채널에 자동으로 분할 업로드됩니다 · 최대 2 GB</div>
+        <div class="upload-title">Drag and drop or click to upload</div>
+        <div class="upload-hint">
+          Automatically split and uploaded to your Discord channel · Max 2 GB
+        </div>
         <input type="file" id="fileInput" />
       </div>
 
       <div class="section-hd">
-        <h2>업로드된 파일</h2>
+        <h2>Uploaded Files</h2>
         <button class="btn-refresh" onclick="loadFiles()">
-          <i class="fa-solid fa-rotate-right"></i> 새로고침
+          <i class="fa-solid fa-rotate-right"></i> Refresh
         </button>
       </div>
 
       <div class="file-table" id="fileTable">
         <div class="empty">
           <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
-          <p>업로드된 파일이 없습니다</p>
+          <p>No files uploaded yet</p>
         </div>
       </div>
       <div class="pagination" id="pagination" style="display: none"></div>
@@ -48,18 +50,18 @@
         <div class="modal-icon" id="modalIcon">
           <i class="fa-solid fa-cloud-arrow-up"></i>
         </div>
-        <h3 id="modalTitle">업로드 중...</h3>
+        <h3 id="modalTitle">Uploading...</h3>
         <div class="modal-filename" id="modalFilename"></div>
         <div class="progress-track">
           <div class="progress-fill" id="progressFill"></div>
         </div>
         <div class="progress-label">
-          <span id="progressLabel">연결 중...</span>
+          <span id="progressLabel">Connecting...</span>
           <span class="progress-pct" id="progressPct"></span>
         </div>
         <div class="modal-cancel">
           <button class="btn btn-cancel-op" onclick="cancelOperation()">
-            <i class="fa-solid fa-xmark"></i> 취소
+            <i class="fa-solid fa-xmark"></i> Cancel
           </button>
         </div>
       </div>
@@ -79,7 +81,7 @@
           <div class="detail-meta" id="detailMeta"></div>
           <div class="detail-hash" id="detailHash"></div>
         </div>
-        <div class="detail-section-label">청크 목록</div>
+        <div class="detail-section-label">Chunk List</div>
         <div class="detail-chunks" id="detailChunks"></div>
       </div>
     </div>
@@ -90,16 +92,18 @@
         <div class="modal-icon modal-icon--danger">
           <i class="fa-solid fa-trash"></i>
         </div>
-        <h3>파일 삭제</h3>
+        <h3>Delete File</h3>
         <div class="modal-filename" id="deleteFilename"></div>
-        <p class="confirm-desc">Discord에 업로드된 청크 메시지도 함께 삭제하시겠습니까?</p>
+        <p class="confirm-desc">
+          Do you also want to delete the chunk messages uploaded to Discord?
+        </p>
         <div class="confirm-actions">
-          <button class="btn btn-confirm-cancel" onclick="closeDeleteModal()">취소</button>
+          <button class="btn btn-confirm-cancel" onclick="closeDeleteModal()">Cancel</button>
           <button class="btn btn-confirm-local" onclick="confirmDelete(false)">
-            <i class="fa-solid fa-database"></i> 로컬만 삭제
+            <i class="fa-solid fa-database"></i> Local Only
           </button>
           <button class="btn btn-confirm-discord" onclick="confirmDelete(true)">
-            <i class="fa-brands fa-discord"></i> Discord 포함 삭제
+            <i class="fa-brands fa-discord"></i> Include Discord
           </button>
         </div>
       </div>
