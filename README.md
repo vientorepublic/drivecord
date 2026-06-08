@@ -1,6 +1,6 @@
 # DriveCord
 
-<img width="1138" height="208" alt="drivecord_logo" src="https://github.com/user-attachments/assets/8b64514b-7477-4ab2-9f5e-b0145760253a" />
+<img width="569" height="104" alt="drivecord_logo" src="https://github.com/user-attachments/assets/8b64514b-7477-4ab2-9f5e-b0145760253a" />
 
 https://github.com/user-attachments/assets/edff9b94-afcc-43a1-828c-940430d27e19
 
