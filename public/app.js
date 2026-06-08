@@ -136,7 +136,7 @@ async function handleUpload(file) {
   fd.append('file', file);
 
   showOverlay('upload', file.name);
-  setProgress(0, 1, 'Connecting to Discord...');
+  setProgress(0, 1, 'Preparing upload...');
 
   activeAbortCtrl = new AbortController();
   const signal = activeAbortCtrl.signal;
@@ -146,7 +146,10 @@ async function handleUpload(file) {
     await readSSE(
       res,
       (ev) => {
-        if (ev.type === 'start') setProgress(0, 1, 'Connecting to Discord...');
+        if (ev.type === 'start') setProgress(0, 1, 'Preparing upload...');
+        if (ev.type === 'connecting') setProgress(0, 1, 'Connecting to Discord...');
+        if (ev.type === 'splitting')
+          setProgress(0, ev.total, `Splitting into ${ev.total} chunks...`);
         if (ev.type === 'progress')
           setProgress(ev.done, ev.total, `Uploading chunk ${ev.done}/${ev.total}`);
         if (ev.type === 'done') {
@@ -174,7 +177,7 @@ async function handleUpload(file) {
 // ── Download ──────────────────────────────────────────────────────────────────
 async function startDownload(id, filename) {
   showOverlay('download', filename);
-  setProgress(0, 1, 'Downloading from Discord...');
+  setProgress(0, 1, 'Preparing download...');
 
   activeAbortCtrl = new AbortController();
   const signal = activeAbortCtrl.signal;
@@ -184,6 +187,8 @@ async function startDownload(id, filename) {
     await readSSE(
       res,
       (ev) => {
+        if (ev.type === 'start') setProgress(0, 1, 'Preparing download...');
+        if (ev.type === 'connecting') setProgress(0, 1, 'Connecting to Discord...');
         if (ev.type === 'progress')
           setProgress(ev.done, ev.total, `Downloading chunk ${ev.done}/${ev.total}`);
         if (ev.type === 'ready') {

@@ -82,6 +82,7 @@ export async function uploadFile(client: Client, options: UploadOptions): Promis
   const filePath = path.resolve(options.filePath);
   const originalFilename = path.basename(filePath);
 
+  options.onConnect?.();
   const channel = await client.channels.fetch(channelId);
   if (!channel || !(channel instanceof TextChannel)) {
     throw new Error(`Channel ${channelId} not found or is not a text channel.`);

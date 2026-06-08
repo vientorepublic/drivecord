@@ -51,6 +51,7 @@ export async function downloadFile(
   const outputDir = path.resolve(options.outputDir ?? '.');
   const outputPath = path.join(outputDir, manifest.originalFilename);
 
+  options.onConnect?.();
   const channel = await client.channels.fetch(manifest.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
     throw new Error(`Channel ${manifest.channelId} not found or is not a text channel.`);

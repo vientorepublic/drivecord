@@ -1,5 +1,7 @@
 export enum SseEventType {
   Start = 'start',
+  Connecting = 'connecting',
+  Splitting = 'splitting',
   Progress = 'progress',
   Done = 'done',
   Ready = 'ready',
@@ -38,6 +40,7 @@ export interface UploadOptions {
   chunkSize?: number;
   manifestOut?: string;
   signal?: AbortSignal;
+  onConnect?: () => void;
   onSplit?: (totalChunks: number) => void;
   onProgress?: (done: number, total: number) => void;
   onRetry?: (chunkIndex: number, attempt: number, maxRetries: number) => void;
@@ -47,5 +50,6 @@ export interface DownloadOptions {
   manifestPath: string;
   outputDir?: string;
   signal?: AbortSignal;
+  onConnect?: () => void;
   onProgress?: (done: number, total: number) => void;
 }

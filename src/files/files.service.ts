@@ -72,15 +72,23 @@ export class FilesService implements OnModuleInit {
     file: Express.Multer.File,
     onProgress?: (done: number, total: number) => void,
     signal?: AbortSignal,
+    onConnect?: () => void,
+    onSplit?: (total: number) => void,
   ): Promise<FileManifestEntity> {
+    // Multer decodes the multipart filename bytes as Latin-1, but browsers send
+    // them as UTF-8. Re-encode as Latin-1 then decode as UTF-8 to recover the
+    // original string (handles Korean and other non-ASCII filenames).
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
     const tmpPath = file.path;
     const t0 = Date.now();
     this.logger.debug(
-      `Upload started — "${file.originalname}" (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+      `Upload started — "${originalName}" (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
     );
     try {
       const manifest = await uploadFile(this.discord.getClient(), {
         filePath: tmpPath,
+        onConnect,
+        onSplit,
         onProgress,
         signal,
         onRetry: (chunkIndex, attempt, maxRetries) => {
@@ -91,7 +99,7 @@ export class FilesService implements OnModuleInit {
       // cancelled: uploadFile may return successfully if the abort signal arrived
       // after the last chunk's network call completed but before this line.
       signal?.throwIfAborted();
-      manifest.originalFilename = file.originalname;
+      manifest.originalFilename = originalName;
       const entity = this.repo.create({ ...manifest, id: crypto.randomUUID() });
       const saved = await this.repo.save(entity);
       this.logger.debug(
@@ -107,6 +115,7 @@ export class FilesService implements OnModuleInit {
     id: string,
     onProgress?: (done: number, total: number) => void,
     signal?: AbortSignal,
+    onConnect?: () => void,
   ): Promise<string> {
     const entry = await this.repo.findOneBy({ id });
     if (!entry) throw new NotFoundException(`File with id "${id}" not found`);
@@ -121,6 +130,7 @@ export class FilesService implements OnModuleInit {
       await downloadFile(this.discord.getClient(), entry, {
         manifestPath: '',
         outputDir: tmpDir,
+        onConnect,
         onProgress,
         signal,
       });

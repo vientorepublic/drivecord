@@ -37,12 +37,15 @@ export class FilesController {
     setupSseResponse(res);
 
     await runSseHandler(res, async (signal, write) => {
-      write({ type: SseEventType.Start, filename: file.originalname });
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      write({ type: SseEventType.Start, filename: originalName });
 
       const entry = await this.filesService.upload(
         file,
         (done, total) => write({ type: SseEventType.Progress, done, total }),
         signal,
+        () => write({ type: SseEventType.Connecting }),
+        (total) => write({ type: SseEventType.Splitting, total }),
       );
 
       write({ type: SseEventType.Done, file: entry });
@@ -60,6 +63,7 @@ export class FilesController {
         id,
         (done, total) => write({ type: SseEventType.Progress, done, total }),
         signal,
+        () => write({ type: SseEventType.Connecting }),
       );
 
       write({ type: SseEventType.Ready, jobId });
