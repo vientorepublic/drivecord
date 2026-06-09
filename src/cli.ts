@@ -1,20 +1,37 @@
 import type { LoggerService } from '@nestjs/common';
 
+// ── Terminal colour-support detection ────────────────────────────────────────
+
+export function supportsColor(): boolean {
+  if (process.env.NO_COLOR !== undefined) return false;
+  if (process.env.FORCE_COLOR !== undefined) return true;
+  if (!process.stdout.isTTY) return false;
+  if (process.env.TERM === 'dumb') return false;
+  return true;
+}
+
+const COLOR_ENABLED = supportsColor();
+
+/** Returns the ANSI escape code only when colour output is supported. */
+function esc(code: string): string {
+  return COLOR_ENABLED ? code : '';
+}
+
 // ── ANSI colour palette ───────────────────────────────────────────────────────
 
 export const C = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  purple: '\x1b[38;5;135m',
-  violet: '\x1b[38;5;99m',
-  magenta: '\x1b[38;5;213m',
-  white: '\x1b[97m',
-  gray: '\x1b[38;5;245m',
-  cyan: '\x1b[38;5;117m',
-  yellow: '\x1b[38;5;221m',
-  red: '\x1b[38;5;203m',
-} as const;
+  reset: esc('\x1b[0m'),
+  bold: esc('\x1b[1m'),
+  dim: esc('\x1b[2m'),
+  purple: esc('\x1b[38;5;135m'),
+  violet: esc('\x1b[38;5;99m'),
+  magenta: esc('\x1b[38;5;213m'),
+  white: esc('\x1b[97m'),
+  gray: esc('\x1b[38;5;245m'),
+  cyan: esc('\x1b[38;5;117m'),
+  yellow: esc('\x1b[38;5;221m'),
+  red: esc('\x1b[38;5;203m'),
+};
 
 // ── Custom NestJS logger ──────────────────────────────────────────────────────
 
@@ -85,6 +102,7 @@ function lerpColor(
 }
 
 function gradientLine(text: string, stops: [number, number, number][]): string {
+  if (!COLOR_ENABLED) return text;
   const len = text.length;
   if (len === 0) return '';
   const n = stops.length - 1;
